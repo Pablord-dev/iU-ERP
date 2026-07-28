@@ -3,6 +3,13 @@ import type { Db } from '@/db'
 import { users } from './schema'
 import { verifyPassword } from './password'
 
+/**
+ * Valid bcrypt hash (cost 12) of a throwaway string. Compared against when the
+ * email does not exist, so unknown and known emails take the same time and the
+ * login endpoint cannot be used to enumerate users.
+ */
+const DUMMY_HASH = '$2b$12$4t0l/uhkJspSxiQI6AcpNuzI3YW6Pj5WL3beFJRjEo5rSXbRbIxRe'
+
 export interface AuthUser {
   id: string
   name: string
@@ -29,8 +36,11 @@ export async function verifyCredentials(db: Db, email: string, password: string)
     .select()
     .from(users)
     .where(and(eq(users.email, email), isNull(users.deletedAt)))
-  if (!user || !user.isActive) return null
+  if (!user) {
+    await verifyPassword(password, DUMMY_HASH)
+    return null
+  }
   const valid = await verifyPassword(password, user.passwordHash)
-  if (!valid) return null
+  if (!valid || !user.isActive) return null
   return { id: user.id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId }
 }
