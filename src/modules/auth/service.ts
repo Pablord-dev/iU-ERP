@@ -11,6 +11,17 @@ export interface AuthUser {
   organizationId: string
 }
 
+/**
+ * Live-session revalidation: deactivating or soft-deleting a user must cut
+ * their access immediately, not when the JWT expires. Called from the jwt
+ * callback on every auth() so role/name changes propagate too.
+ */
+export async function getSessionUser(db: Db, userId: string): Promise<AuthUser | null> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId))
+  if (!user || !user.isActive || user.deletedAt) return null
+  return { id: user.id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId }
+}
+
 /** Business rule: only active, non-deleted users may sign in. Never leaks the hash. */
 export async function verifyCredentials(db: Db, email: string, password: string): Promise<AuthUser | null> {
   const [user] = await db.select().from(users).where(eq(users.email, email))
