@@ -8,11 +8,18 @@ const required = (name: string): string => {
   return value
 }
 
-await seed(db, {
-  orgName: required('SEED_ORG_NAME'),
-  adminEmail: required('SEED_ADMIN_EMAIL'),
-  adminPassword: required('SEED_ADMIN_PASSWORD'),
-  adminName: required('SEED_ADMIN_NAME'),
+async function main() {
+  await seed(db, {
+    orgName: required('SEED_ORG_NAME'),
+    adminEmail: required('SEED_ADMIN_EMAIL'),
+    adminPassword: required('SEED_ADMIN_PASSWORD'),
+    adminName: required('SEED_ADMIN_NAME'),
+  })
+  console.log('Seed completed.')
+  process.exit(0)
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
 })
-console.log('Seed completed.')
-process.exit(0)
