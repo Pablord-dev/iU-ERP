@@ -8,6 +8,13 @@
       "when": 1785261477850,
       "tag": "0000_giant_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785261563725,
+      "tag": "0001_solid_wallop",
+      "breakpoints": true
     }
   ]
 }
