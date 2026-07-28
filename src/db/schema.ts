@@ -2,3 +2,5 @@
 export * from '@/modules/organization/schema'
 export * from '@/modules/auth/schema'
 export * from '@/modules/customization/schema'
+export * from '@/modules/clients/schema'
+export * from '@/modules/projects/schema'
