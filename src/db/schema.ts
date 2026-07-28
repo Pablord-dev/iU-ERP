@@ -1,0 +1,10 @@
+// Aggregates every module's schema. drizzle-kit reads this file.
+export * from '@/modules/organization/schema'
+export * from '@/modules/auth/schema'
+export * from '@/modules/customization/schema'
+export * from '@/modules/clients/schema'
+export * from '@/modules/projects/schema'
+export * from '@/modules/tasks/schema'
+export * from '@/modules/time/schema'
+export * from '@/modules/collaboration/schema'
+export * from '@/modules/ai/schema'

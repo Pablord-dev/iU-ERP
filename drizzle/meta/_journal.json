@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785261477850,
+      "tag": "0000_giant_hex",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785261563725,
+      "tag": "0001_solid_wallop",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785261725197,
+      "tag": "0002_lumpy_alex_wilder",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785261892825,
+      "tag": "0003_talented_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785262020304,
+      "tag": "0004_whole_living_mummy",
+      "breakpoints": true
+    }
+  ]
+}
