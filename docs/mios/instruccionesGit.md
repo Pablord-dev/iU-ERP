@@ -12,7 +12,7 @@ Reglas para trabajar en este repositorio. Aplican a toda sesión que modifique c
 
 - Commits pequeños y frecuentes, uno por unidad lógica de cambio. No acumules una tarea entera en un solo commit.
 - Mensajes en imperativo, una línea de asunto de ≤72 caracteres y, si hace falta, un cuerpo que explique el **por qué**, no el qué.
-- Antes de dar algo por terminado, corre `<comando de tests>` y `<comando de lint/typecheck>` y muéstrame la salida real, no un resumen de que pasó.
+- Antes de dar algo por terminado, corre `npm test` y `npm run lint && npm run typecheck` y muéstrame la salida real, no un resumen de que pasó.
 - Si te corrijo dos veces sobre lo mismo, para y dime qué falta en el contexto en vez de intentar una tercera variante.
 
 ## Antes de abrir el PR
