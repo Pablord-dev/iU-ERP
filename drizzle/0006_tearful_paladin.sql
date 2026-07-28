@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "custom_statuses_org_type_name_unique" ON "custom_statuses" USING btree ("organization_id","entity_type","name");--> statement-breakpoint
+CREATE UNIQUE INDEX "custom_statuses_one_default_per_type" ON "custom_statuses" USING btree ("organization_id","entity_type") WHERE "custom_statuses"."is_default" = true;

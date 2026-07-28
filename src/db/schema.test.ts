@@ -41,4 +41,12 @@ describe('organizations and users schema', () => {
     await db.insert(users).values({ ...base, email: 'dup@example.com' })
     await expect(db.insert(users).values({ ...base, email: 'dup@example.com' })).rejects.toThrow()
   })
+
+  it('allows reusing the email of a soft-deleted user', async () => {
+    const [org] = await db.insert(organizations).values({ name: 'Org C' }).returning()
+    const base = { organizationId: org.id, name: 'Re', passwordHash: 'x' } as const
+    await db.insert(users).values({ ...base, email: 'reuse@example.com', deletedAt: new Date() })
+    const [again] = await db.insert(users).values({ ...base, email: 'reuse@example.com' }).returning()
+    expect(again.deletedAt).toBeNull()
+  })
 })

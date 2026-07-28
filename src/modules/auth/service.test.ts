@@ -4,7 +4,7 @@ import { createTestDb } from '@/test/db'
 import { organizations } from '@/modules/organization/schema'
 import { users } from '@/modules/auth/schema'
 import { hashPassword } from './password'
-import { verifyCredentials } from './service'
+import { getSessionUser, verifyCredentials } from './service'
 
 describe('verifyCredentials', () => {
   let db: Db
@@ -34,5 +34,46 @@ describe('verifyCredentials', () => {
 
   it('returns null for an inactive user', async () => {
     expect(await verifyCredentials(db, 'out@x.com', 'correct')).toBeNull()
+  })
+})
+
+describe('getSessionUser (live-session revalidation)', () => {
+  let db: Db
+  let activeId: string
+  let inactiveId: string
+  let deletedId: string
+
+  beforeAll(async () => {
+    db = await createTestDb()
+    const [org] = await db.insert(organizations).values({ name: 'Org' }).returning()
+    const rows = await db
+      .insert(users)
+      .values([
+        { organizationId: org.id, name: 'Viva', email: 'viva@x.com', passwordHash: 'x', role: 'member' },
+        { organizationId: org.id, name: 'Baja', email: 'baja@x.com', passwordHash: 'x', isActive: false },
+        { organizationId: org.id, name: 'Borrada', email: 'borrada@x.com', passwordHash: 'x', deletedAt: new Date() },
+      ])
+      .returning()
+    activeId = rows[0].id
+    inactiveId = rows[1].id
+    deletedId = rows[2].id
+  })
+
+  it('returns fresh data for an active user', async () => {
+    const user = await getSessionUser(db, activeId)
+    expect(user).toMatchObject({ id: activeId, email: 'viva@x.com', role: 'member' })
+    expect(user).not.toHaveProperty('passwordHash')
+  })
+
+  it('returns null once the user is deactivated', async () => {
+    expect(await getSessionUser(db, inactiveId)).toBeNull()
+  })
+
+  it('returns null once the user is soft-deleted', async () => {
+    expect(await getSessionUser(db, deletedId)).toBeNull()
+  })
+
+  it('returns null for an unknown id', async () => {
+    expect(await getSessionUser(db, crypto.randomUUID())).toBeNull()
   })
 })

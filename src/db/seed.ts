@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { Db } from '@/db'
 import { organizations } from '@/modules/organization/schema'
 import { users } from '@/modules/auth/schema'
@@ -20,7 +20,11 @@ export async function seed(db: Db, opts: SeedOptions): Promise<void> {
     ;[org] = await db.insert(organizations).values({ name: opts.orgName }).returning()
   }
 
-  const existingAdmin = await db.select().from(users).where(eq(users.email, opts.adminEmail))
+  // Only a live admin counts: if the seeded admin was soft-deleted, recreate it.
+  const existingAdmin = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, opts.adminEmail), isNull(users.deletedAt)))
   if (existingAdmin.length === 0) {
     await db.insert(users).values({
       organizationId: org.id,

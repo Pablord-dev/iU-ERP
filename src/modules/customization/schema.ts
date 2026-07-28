@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { boolean, integer, jsonb, pgEnum, pgTable, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core'
 import { idPk, timestamps } from '@/db/columns'
 import { organizations } from '@/modules/organization/schema'
@@ -10,19 +11,28 @@ export const customFieldType = pgEnum('custom_field_type', [
   'text', 'number', 'date', 'select', 'multi_select', 'checkbox', 'user', 'link',
 ])
 
-export const customStatuses = pgTable('custom_statuses', {
-  id: idPk(),
-  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
-  /** 'project' | 'project_health' | 'milestone' | 'task' — subprojects reuse 'project'. */
-  entityType: varchar('entity_type', { length: 30 }).notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  /** null only for 'project_health' (indicator, not workflow). */
-  category: statusCategory('category'),
-  color: varchar('color', { length: 7 }),
-  sortOrder: integer('sort_order').default(0).notNull(),
-  isDefault: boolean('is_default').default(false).notNull(),
-  ...timestamps,
-})
+export const customStatuses = pgTable(
+  'custom_statuses',
+  {
+    id: idPk(),
+    organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+    /** 'project' | 'project_health' | 'milestone' | 'task' — subprojects reuse 'project'. */
+    entityType: varchar('entity_type', { length: 30 }).notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    /** null only for 'project_health' (indicator, not workflow). */
+    category: statusCategory('category'),
+    color: varchar('color', { length: 7 }),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    isDefault: boolean('is_default').default(false).notNull(),
+    ...timestamps,
+  },
+  // DB-level invariants the seed and future status editors rely on:
+  // names unique per org+type, and at most one default per org+type.
+  (t) => [
+    uniqueIndex('custom_statuses_org_type_name_unique').on(t.organizationId, t.entityType, t.name),
+    uniqueIndex('custom_statuses_one_default_per_type').on(t.organizationId, t.entityType).where(sql`${t.isDefault} = true`),
+  ],
+)
 
 export const customFields = pgTable('custom_fields', {
   id: idPk(),
