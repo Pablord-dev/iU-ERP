@@ -24,7 +24,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationId = user.organizationId
         return token
       }
-      const fresh = await getSessionUser(db, token.id)
+      let fresh: Awaited<ReturnType<typeof getSessionUser>>
+      try {
+        fresh = await getSessionUser(db, token.id)
+      } catch {
+        // Transient DB failure: keep the current token instead of killing the
+        // session; revocation is re-checked on the next auth() call.
+        return token
+      }
       if (!fresh) return null // deactivated or soft-deleted: invalidate the session
       token.name = fresh.name
       token.role = fresh.role
