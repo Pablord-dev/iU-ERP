@@ -20,7 +20,7 @@
 - **Toda mutación de negocio escribe en `activity_log`** vía `logActivity` (spec §5 flujo ②, §7 auditoría).
 - Estados personalizables **siempre** desde `custom_statuses` filtrando por `entity_type`; los subproyectos reutilizan el catálogo `project` (Iteración 0). Las categorías del sistema (`open/in_progress/blocked/done/cancelled`) gobiernan la semántica (p. ej. "atrasada" = vencida y categoría ∉ {done, cancelled}).
 - Totales/consolidaciones **se calculan en consultas**; jamás contadores almacenados (spec §1/§4.3).
-- Flujo git: rama `feat/iteration-1-core` desde `master`; commits pequeños por unidad lógica (`docs/mios/instruccionesGit.md`).
+- Flujo git (`docs/mios/instruccionesGit.md`): **una task = una rama = una sesión = un PR**. Cada task se trabaja en `feat/it1-task-NN-<slug>` creada desde `master` actualizado (la task anterior ya mergeada), y cierra con: checkboxes de la task marcados `[x]` en este plan (commiteado en la rama), `git diff` mostrado al usuario, code review, y PR con `gh pr create`. Commits pequeños por unidad lógica.
 - Formularios: `<form action={...}>` + `useActionState`; resultado tipado `ActionResult`; en éxito la action hace `revalidatePath` + `redirect`.
 
 ---
@@ -47,8 +47,10 @@
 
 ```bash
 git checkout master && git pull
-git checkout -b feat/iteration-1-core
+git checkout -b feat/it1-task-01-shell
 ```
+
+(En las tasks siguientes el nombre de la rama cambia: `feat/it1-task-02-activity-log`, `feat/it1-task-03-clients-service`, etc., siempre desde `master` con la task anterior ya mergeada.)
 
 - [ ] **Step 2: Instalar shadcn/ui y componentes base**
 
@@ -4144,19 +4146,14 @@ git add e2e/
 git commit -m "test: add E2E for hierarchy capture flow"
 ```
 
-- [ ] **Step 4: Cierre de la iteración (flujo de instruccionesGit.md)**
+- [ ] **Step 4: PR de la task y cierre de la iteración**
+
+Esta task cierra igual que todas (diff → code review → PR de su rama `feat/it1-task-14-e2e`), y además cierra la iteración:
 
 1. `npm run lint && npm run typecheck && npm test && npm run test:e2e` — todo en verde.
-2. Mostrar al usuario `git diff master...feat/iteration-1-core --stat`.
-3. Correr `/code-review` sobre el diff (o revisión con agente independiente si la skill no está disponible para el modelo) y reportar hallazgos de corrección.
-4. Push y PR:
-
-```bash
-git push -u origin feat/iteration-1-core
-gh pr create --base master --head feat/iteration-1-core --title "Iteration 1: core hierarchy" --body "(qué cambia / por qué / cómo verificarlo, según el template de la iteración 0)"
-```
-
-5. Verificar CI en verde en el PR; tras merge del usuario, Vercel despliega y se verifica el flujo de captura en producción.
+2. Mostrar al usuario `git diff master...HEAD --stat`, correr `/code-review` (o revisión con agente independiente si la skill no está disponible para el modelo) y reportar hallazgos de corrección.
+3. `git push -u origin feat/it1-task-14-e2e` y `gh pr create` (qué cambia / por qué / cómo verificarlo).
+4. Tras el merge del usuario, Vercel despliega: verificar en producción el flujo completo de captura (criterios 1–6) y repasar la "Verificación final de la iteración" de abajo.
 
 ---
 
