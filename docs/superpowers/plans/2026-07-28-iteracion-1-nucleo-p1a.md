@@ -61,6 +61,8 @@ npx shadcn@latest add --yes button input label textarea select badge card table 
 
 Si `init` pregunta algo pese a `--yes`, aceptar defaults (RSC, Tailwind 4, alias `@/*`). Verificar que creó `components.json` y `src/components/ui/`.
 
+> **Nota de ejecución (Task 1):** la CLI de shadcn 4.16 eliminó el flag de color base; el init real fue `npx shadcn@latest init --yes -b radix -p nova` (baseColor `neutral` quedó registrado en `components.json`). Además renombró la variable de fuente sans: el layout raíz ahora usa `--font-sans` en lugar de `--font-geist-sans`.
+
 - [x] **Step 3: Crear los helpers de dominio**
 
 `src/lib/ctx.ts`:
