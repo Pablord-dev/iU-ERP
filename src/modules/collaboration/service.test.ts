@@ -33,6 +33,7 @@ describe('logActivity', () => {
     const [row] = await db.select().from(activityLog).where(eq(activityLog.entityId, entityId))
     expect(row.organizationId).toBe(ctx.orgId)
     expect(row.actorId).toBe(ctx.userId)
+    expect(row.entityType).toBe('client')
     expect(row.action).toBe('status_changed')
     expect(row.changes).toEqual({ before: { isActive: true }, after: { isActive: false } })
   })
