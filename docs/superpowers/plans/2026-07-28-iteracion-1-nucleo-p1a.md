@@ -43,7 +43,7 @@
   - `fieldErrorsOf(error: ZodError): Record<string, string[]>` y `emptyToUndefined` en `@/lib/zod-utils`
   - Componentes shadcn: `button, input, label, textarea, select, badge, card, table, dialog, separator, sonner`
 
-- [ ] **Step 1: Crear la rama**
+- [x] **Step 1: Crear la rama**
 
 ```bash
 git checkout master && git pull
@@ -52,7 +52,7 @@ git checkout -b feat/it1-task-01-shell
 
 (En las tasks siguientes el nombre de la rama cambia: `feat/it1-task-02-activity-log`, `feat/it1-task-03-clients-service`, etc., siempre desde `master` con la task anterior ya mergeada.)
 
-- [ ] **Step 2: Instalar shadcn/ui y componentes base**
+- [x] **Step 2: Instalar shadcn/ui y componentes base**
 
 ```bash
 npx shadcn@latest init --yes -b neutral
@@ -61,7 +61,7 @@ npx shadcn@latest add --yes button input label textarea select badge card table 
 
 Si `init` pregunta algo pese a `--yes`, aceptar defaults (RSC, Tailwind 4, alias `@/*`). Verificar que creó `components.json` y `src/components/ui/`.
 
-- [ ] **Step 3: Crear los helpers de dominio**
+- [x] **Step 3: Crear los helpers de dominio**
 
 `src/lib/ctx.ts`:
 
@@ -134,7 +134,7 @@ export const emptyToUndefined = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v
 ```
 
-- [ ] **Step 4: Crear el shell con navegación**
+- [x] **Step 4: Crear el shell con navegación**
 
 `src/components/app-sidebar.tsx`:
 
@@ -229,13 +229,13 @@ export default function HomePage() {
 rm src/app/page.tsx
 ```
 
-- [ ] **Step 5: Verificar**
+- [x] **Step 5: Verificar**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build`
 Expected: todo en verde; el build lista `/`, `/clientes` aún no existe (llega en Task 4).
 Luego `npm run dev`: `/` muestra el shell con sidebar y el nombre del usuario; "Cerrar sesión" funciona.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
