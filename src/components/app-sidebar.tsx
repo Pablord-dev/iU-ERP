@@ -17,7 +17,8 @@ export function AppSidebar() {
     <nav className="flex w-56 shrink-0 flex-col gap-1 border-r bg-white p-4">
       <p className="mb-4 text-lg font-semibold">P-ERP</p>
       {links.map((l) => {
-        const active = l.href === '/' ? pathname === '/' : pathname.startsWith(l.href.split('/').slice(0, 2).join('/'))
+        const base = l.href.split('/').slice(0, 2).join('/')
+        const active = l.href === '/' ? pathname === '/' : pathname === base || pathname.startsWith(`${base}/`)
         return (
           <Link
             key={l.href}
