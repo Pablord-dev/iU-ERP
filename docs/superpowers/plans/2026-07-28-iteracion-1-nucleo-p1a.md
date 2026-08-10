@@ -369,7 +369,7 @@ git commit -m "feat: add activity logging service"
     - `archiveClient(db: Db, ctx: Ctx, id: string): Promise<void>` (soft delete)
   - `Client = typeof clients.$inferSelect`
 
-- [ ] **Step 1: Crear `src/modules/clients/validation.ts`**
+- [x] **Step 1: Crear `src/modules/clients/validation.ts`**
 
 ```ts
 import { z } from 'zod'
@@ -396,7 +396,7 @@ export const clientInputSchema = z.object({
 export type ClientInput = z.infer<typeof clientInputSchema>
 ```
 
-- [ ] **Step 2: Escribir el test que falla — `src/modules/clients/service.test.ts`**
+- [x] **Step 2: Escribir el test que falla — `src/modules/clients/service.test.ts`**
 
 ```ts
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -471,12 +471,12 @@ describe('clients service', () => {
 })
 ```
 
-- [ ] **Step 3: Correr y verificar que falla**
+- [x] **Step 3: Correr y verificar que falla**
 
 Run: `npm test`
 Expected: FAIL — `./service` no existe en clients.
 
-- [ ] **Step 4: Implementar `src/modules/clients/service.ts`**
+- [x] **Step 4: Implementar `src/modules/clients/service.ts`**
 
 ```ts
 import { and, desc, eq, isNull } from 'drizzle-orm'
@@ -544,12 +544,12 @@ export async function archiveClient(db: Db, ctx: Ctx, id: string): Promise<void>
 }
 ```
 
-- [ ] **Step 5: Correr los tests y verificar que pasan**
+- [x] **Step 5: Correr los tests y verificar que pasan**
 
 Run: `npm test`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/clients/
