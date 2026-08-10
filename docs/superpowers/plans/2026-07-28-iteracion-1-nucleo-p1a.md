@@ -390,11 +390,13 @@ export const clientInputSchema = z.object({
     z.coerce.number({ message: 'Debe ser un número' }).positive('Debe ser mayor a 0').optional(),
   ),
   notes: optionalText(5000),
-  isActive: z.preprocess((v) => v === 'on' || v === true, z.boolean()).default(true),
+  isActive: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
 })
 
 export type ClientInput = z.infer<typeof clientInputSchema>
 ```
+
+> **Nota de ejecución (Task 3):** el snippet original llevaba `.default(true)` en `isActive`, pero en Zod 4 `.default()` corta antes del preprocess: un checkbox desmarcado (clave ausente en FormData) parseaba como `true` y era imposible desactivar un cliente desde el formulario de la Task 4. Se eliminó el `.default` (el preprocess ya mapea `undefined → false`; el `defaultChecked` del form cubre el default de UI) y se agregó `src/modules/clients/validation.test.ts` con la semántica del checkbox, la coerción de `hourlyRate` y `emptyToUndefined`.
 
 - [x] **Step 2: Escribir el test que falla — `src/modules/clients/service.test.ts`**
 

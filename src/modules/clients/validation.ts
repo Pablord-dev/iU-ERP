@@ -16,7 +16,8 @@ export const clientInputSchema = z.object({
     z.coerce.number({ message: 'Debe ser un número' }).positive('Debe ser mayor a 0').optional(),
   ),
   notes: optionalText(5000),
-  isActive: z.preprocess((v) => v === 'on' || v === true, z.boolean()).default(true),
+  /** HTML checkbox: absent key means unchecked, so undefined must map to false (no .default). */
+  isActive: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
 })
 
 export type ClientInput = z.infer<typeof clientInputSchema>
