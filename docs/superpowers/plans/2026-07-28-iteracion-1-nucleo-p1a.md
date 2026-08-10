@@ -255,7 +255,7 @@ git commit -m "feat: add shadcn/ui, domain helpers and app shell"
 - Consumes: `activityLog` (Iteración 0), `Ctx`, `createTestDb`
 - Produces: `logActivity(db: Db, ctx: Ctx, input: { entityType: string; entityId: string; action: string; changes?: { before?: unknown; after?: unknown } }): Promise<void>` — la usan **todos** los services de mutación (Tasks 3, 5, 6, 8, 9, 10, 13)
 
-- [ ] **Step 1: Escribir el test que falla — `src/modules/collaboration/service.test.ts`**
+- [x] **Step 1: Escribir el test que falla — `src/modules/collaboration/service.test.ts`**
 
 ```ts
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -306,12 +306,12 @@ describe('logActivity', () => {
 })
 ```
 
-- [ ] **Step 2: Correr y verificar que falla**
+- [x] **Step 2: Correr y verificar que falla**
 
 Run: `npm test`
 Expected: FAIL — `./service` no existe en collaboration.
 
-- [ ] **Step 3: Implementar `src/modules/collaboration/service.ts`**
+- [x] **Step 3: Implementar `src/modules/collaboration/service.ts`**
 
 ```ts
 import type { Db } from '@/db'
@@ -338,12 +338,12 @@ export async function logActivity(db: Db, ctx: Ctx, input: ActivityInput): Promi
 }
 ```
 
-- [ ] **Step 4: Correr los tests y verificar que pasan**
+- [x] **Step 4: Correr los tests y verificar que pasan**
 
 Run: `npm test`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/collaboration/service.ts src/modules/collaboration/service.test.ts
