@@ -2033,6 +2033,15 @@ git commit -m "feat: add projects CRUD pages"
 >
 > `archiveProjectAction` no atrapa `DomainError` a propósito, igual que la de clientes: un doble clic en
 > "Archivar" lo recoge el boundary `src/app/(app)/error.tsx` creado en la Task 4.
+>
+> Correcciones del code review: el parche de opciones del `<select>` cubría al responsable pero **no a los
+> participantes**, y ambos comparten la misma lista `users` — guardar un cambio de prioridad borraba del equipo
+> a los participantes desactivados, en silencio; `budgetedHours` usaba `step="0.25"`, que bloquea en el navegador
+> valores que el service acepta (3.1 h) y deja intocable un valor importado que no sea múltiplo de 0.25; las tres
+> actions revalidan además `/clientes/[id]`, que desde esta task lista los proyectos del cliente; el encabezado
+> del detalle enlazaba a un cliente archivado y caía en un 404, ahora lo muestra como texto con "(archivado)";
+> y `getProjectDetail` hacía el join a `users` sin `organization_id` — la única consulta del módulo sin el filtro
+> que su propio comentario decía aplicar (venía de la Task 6).
 
 ---
 
