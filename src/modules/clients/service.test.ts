@@ -59,6 +59,11 @@ describe('clients service', () => {
     await expect(updateClient(db, ctx, foreign.id, INPUT)).rejects.toThrow(DomainError)
   })
 
+  it('returns null for a malformed id instead of leaking a database error', async () => {
+    expect(await getClient(db, ctx, 'not-a-uuid')).toBeNull()
+    await expect(updateClient(db, ctx, 'not-a-uuid', INPUT)).rejects.toThrow(DomainError)
+  })
+
   it('archives instead of deleting and hides archived clients', async () => {
     const client = await createClient(db, ctx, { commercialName: 'Temporal', isActive: true })
     await archiveClient(db, ctx, client.id)
