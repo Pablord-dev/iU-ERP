@@ -44,3 +44,12 @@ export async function verifyCredentials(db: Db, email: string, password: string)
   if (!valid || !user.isActive) return null
   return { id: user.id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId }
 }
+
+/** Users selectable as responsible/assignee/member in forms. */
+export async function listActiveUsers(db: Db, orgId: string): Promise<{ id: string; name: string; email: string }[]> {
+  return db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(and(eq(users.organizationId, orgId), eq(users.isActive, true), isNull(users.deletedAt)))
+    .orderBy(users.name)
+}
