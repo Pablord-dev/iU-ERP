@@ -27,7 +27,11 @@ export async function listClients(db: Db, ctx: Ctx): Promise<Client[]> {
   return db.select().from(clients).where(scope(ctx)).orderBy(desc(clients.isActive), clients.commercialName)
 }
 
+/** Route params reach here verbatim; a non-UUID would abort with a Postgres 22P02 instead of a 404. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function getClient(db: Db, ctx: Ctx, id: string): Promise<Client | null> {
+  if (!UUID_RE.test(id)) return null
   const [client] = await db.select().from(clients).where(scope(ctx, id))
   return client ?? null
 }
