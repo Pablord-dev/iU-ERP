@@ -1593,6 +1593,24 @@ git commit -m "feat: add projects service with members and cross-tenant guards"
 > de fecha invertidos (`dueDate < startDate`): ambas columnas son `date` sin constraint y nada más lo detecta.
 > Los tests del service van en `src/modules/projects/service.test.ts` (archivo nuevo, como dice **Files**), no
 > dentro de `schema.test.ts`; se agregó además `validation.test.ts` siguiendo el patrón de clientes.
+>
+> Correcciones del code review (cada una con su test de regresión, que falló primero):
+> `optionalDate` usa `z.iso.date()` y no un regex — `'2026-02-30'` tiene el formato correcto pero no existe, y
+> llegaba al INSERT como error crudo de Postgres. `optionalPositive(max)` acota según la precisión real de la
+> columna (`budgeted_hours` es `numeric(8,2)`, `hourly_rate` `numeric(10,2)`): sin cota, el desbordamiento
+> también salía como 500. `memberIds` se deduplica en el schema **y** en `replaceMembers` — un `<select multiple>`
+> no repite valores pero un POST directo sí, y el duplicado violaba la PK de `project_members`. `listProjects`
+> devuelve `[]` ante un `clientId` malformado en vez de descartar el filtro y listar **todos** los proyectos.
+> `updateProject`/`archiveProject` leen el estado previo **dentro** de la transacción y verifican el `returning()`:
+> leerlo fuera dejaba una ventana en la que el `UPDATE` no tocaba nada, se devolvía `undefined` tipado como
+> `Project` y se registraba en la bitácora una escritura que nunca ocurrió. `priority` lleva
+> `preprocess(emptyToUndefined, …)` para que el placeholder vacío del select caiga en el default. `getProjectDetail`
+> filtra por `organization_id` también en los joins a `clients`/`users`/`custom_statuses`. La acción `updated`
+> registra `before`/`after` del nombre, igual que `updateClient`.
+>
+> **Para la Task 7:** `listActiveUsers` excluye a los usuarios desactivados, pero el service sí admite un
+> responsable desactivado (a propósito, para no romper la edición de proyectos viejos). El `<select>` de
+> responsable debe incluir además el valor actual del proyecto, o al editar desaparecerá de la lista.
 
 ---
 
