@@ -574,7 +574,7 @@ git commit -m "feat: add clients validation and service"
   - `archiveClientAction(id: string): Promise<void>`
   - `<ClientForm action={...} client={...} />` con errores por campo
 
-- [ ] **Step 1: Crear `src/modules/clients/actions.ts`**
+- [x] **Step 1: Crear `src/modules/clients/actions.ts`**
 
 ```ts
 'use server'
@@ -625,7 +625,7 @@ export async function archiveClientAction(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 2: Crear `src/modules/clients/client-form.tsx`**
+- [x] **Step 2: Crear `src/modules/clients/client-form.tsx`**
 
 ```tsx
 'use client'
@@ -693,7 +693,7 @@ export function ClientForm({ action, client }: { action: FormAction; client?: Cl
 
 Nota: `Field` se exporta porque los formularios de proyectos (Task 7), subproyectos/hitos (Tasks 8-9) y tareas (Task 11) lo reutilizan.
 
-- [ ] **Step 3: Crear las páginas**
+- [x] **Step 3: Crear las páginas**
 
 `src/app/(app)/clientes/page.tsx`:
 
@@ -826,18 +826,20 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
 }
 ```
 
-- [ ] **Step 4: Verificación manual y checks**
+- [x] **Step 4: Verificación manual y checks**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build`
 Expected: en verde.
 Con `npm run dev`: crear un cliente con tarifa, verlo en la lista, editarlo, archivar otro y confirmar que desaparece. Enviar el formulario con correo inválido → error en español junto al campo.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/clients/ "src/app/(app)/clientes/"
 git commit -m "feat: add clients CRUD pages"
 ```
+
+> **Nota de ejecución (Task 4):** además de lo planeado, `getClient` ahora valida la forma UUID del id y devuelve `null` si no coincide (hallazgo del review de la Task 3): los params de la ruta `/clientes/[id]` llegan tal cual al service y un id no-UUID abortaba con error 22P02 de Postgres (500) en vez de renderizar el 404. Cubierto con test. La verificación manual con `npm run dev` quedó pendiente para Pablo (el agente no tiene credenciales de login); los checks automáticos (lint, typecheck, 44 tests, build con las 4 rutas) pasaron.
 
 ---
 
