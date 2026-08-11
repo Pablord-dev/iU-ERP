@@ -860,7 +860,7 @@ git commit -m "feat: add clients CRUD pages"
   - `moveStatus(db, ctx, id, direction: 'up' | 'down'): Promise<void>` (intercambia `sortOrder` con el vecino)
   - `CustomStatus = typeof customStatuses.$inferSelect`
 
-- [ ] **Step 1: Crear `src/modules/customization/validation.ts`**
+- [x] **Step 1: Crear `src/modules/customization/validation.ts`**
 
 ```ts
 import { z } from 'zod'
@@ -879,7 +879,7 @@ export const statusInputSchema = z.object({
 export const statusUpdateSchema = statusInputSchema.pick({ name: true, color: true })
 ```
 
-- [ ] **Step 2: Escribir el test que falla — `src/modules/customization/service.test.ts`**
+- [x] **Step 2: Escribir el test que falla — `src/modules/customization/service.test.ts`**
 
 ```ts
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -957,12 +957,12 @@ describe('custom statuses service', () => {
 })
 ```
 
-- [ ] **Step 3: Correr y verificar que falla**
+- [x] **Step 3: Correr y verificar que falla**
 
 Run: `npm test`
 Expected: FAIL — `./service` no existe en customization.
 
-- [ ] **Step 4: Implementar `src/modules/customization/service.ts`**
+- [x] **Step 4: Implementar `src/modules/customization/service.ts`**
 
 ```ts
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
@@ -1083,14 +1083,14 @@ export async function moveStatus(db: Db, ctx: Ctx, id: string, direction: 'up' |
 }
 ```
 
-Nota: `statusInUse` usa `count`, no trae filas; los archivados (soft-deleted) no bloquean la eliminación.
+Nota: `statusInUse` usa `count`, no trae filas. **Corrección respecto al snippet:** los archivados (soft-deleted) **sí** bloquean la eliminación — las FK son `ON DELETE NO ACTION`, así que una fila archivada sigue fijando el estado y el DELETE físico reventaba con violación de FK (ver nota de ejecución).
 
-- [ ] **Step 5: Correr los tests y verificar que pasan**
+- [x] **Step 5: Correr los tests y verificar que pasan**
 
 Run: `npm test`
 Expected: PASS
 
-- [ ] **Step 6: Crear `src/modules/customization/actions.ts`**
+- [x] **Step 6: Crear `src/modules/customization/actions.ts`**
 
 ```ts
 'use server'
@@ -1143,7 +1143,7 @@ export async function moveStatusAction(id: string, direction: 'up' | 'down'): Pr
 export type { StatusEntityType }
 ```
 
-- [ ] **Step 7: Crear `src/modules/customization/status-manager.tsx`**
+- [x] **Step 7: Crear `src/modules/customization/status-manager.tsx`**
 
 ```tsx
 'use client'
@@ -1218,7 +1218,7 @@ export function StatusManager({ entityType, statuses, allowCategory }: { entityT
 }
 ```
 
-- [ ] **Step 8: Crear `src/app/(app)/configuracion/estados/page.tsx`**
+- [x] **Step 8: Crear `src/app/(app)/configuracion/estados/page.tsx`**
 
 ```tsx
 import { db } from '@/db'
@@ -1255,7 +1255,7 @@ export default async function StatusesSettingsPage() {
 }
 ```
 
-- [ ] **Step 9: Verificación y commit**
+- [x] **Step 9: Verificación y commit**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build`
 Expected: en verde.
@@ -1265,6 +1265,10 @@ Con `npm run dev` en `/configuracion/estados`: renombrar un estado, agregar uno 
 git add src/modules/customization/ "src/app/(app)/configuracion/"
 git commit -m "feat: add custom statuses management"
 ```
+
+> **Nota de ejecución (Task 5):** tres desviaciones. (1) `createStatus`/`updateStatus` rechazan nombres duplicados (case-insensitive) dentro del mismo `entity_type` con `DomainError`: el schema tiene el índice único `custom_statuses_org_type_name_unique` (Iteración 0) y sin el guard un nombre repetido —acción normal en esta pantalla— reventaba con error crudo de Postgres. Cubierto con test. (2) Se omitió el `export type { StatusEntityType }` al final de `actions.ts`: nada lo importa desde ahí y `./catalogs` ya exporta el tipo. (3) Los botones ↑/↓/Eliminar se deshabilitan mientras corre la transición (`pending` de `useTransition`, que el snippet descartaba) para evitar dobles envíos. Además hubo que subir `hookTimeout` a 30 s en `vitest.config.ts`: con el archivo de tests número 14, el arranque paralelo de PGlite + migraciones superaba el default de 10 s y tumbaba un subconjunto distinto de archivos en cada corrida. La verificación manual en `/configuracion/estados` queda pendiente para Pablo.
+>
+> **Correcciones del code review (Task 5):** (a) **crítico** — `statusInUse` excluía las filas archivadas, pero las FK a `custom_statuses` son `ON DELETE NO ACTION`: borrar un estado usado solo por un proyecto archivado reventaba con violación de FK (500 sin mensaje) en vez de `DomainError`. Reproducido con test antes de arreglar; ahora los archivados bloquean el borrado y el snippet del Step 4 quedó corregido. (b) `getOwnStatus` valida forma UUID (las Server Actions son endpoints públicos: un id arbitrario daba 22P02); el regex se extrajo a `@/lib/uuid` y `getClient` de la Task 3 ahora lo reutiliza. (c) `moveStatus` corre en transacción, filtra por org en los UPDATE, registra `reordered` en la bitácora y **renumera la lista completa** en vez de intercambiar dos valores: con `sortOrder` empatados el intercambio era un no-op silencioso sin salida desde la UI. (d) `updateStatus` ya no pisa `color` cuando el caller no lo manda y registra color en el before/after. (e) Tests nuevos: aislamiento entre organizaciones, ids malformados, `down` y sus bordes, y recuperación de empates. Pendiente deliberado (no bloqueante): el botón Eliminar no pide confirmación y las acciones exitosas no dan feedback más allá del re-render.
 
 ---
 

@@ -2,6 +2,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm'
 import type { Db } from '@/db'
 import type { Ctx } from '@/lib/ctx'
 import { DomainError } from '@/lib/errors'
+import { isUuid } from '@/lib/uuid'
 import { logActivity } from '@/modules/collaboration/service'
 import { clients } from './schema'
 import type { ClientInput } from './validation'
@@ -27,11 +28,8 @@ export async function listClients(db: Db, ctx: Ctx): Promise<Client[]> {
   return db.select().from(clients).where(scope(ctx)).orderBy(desc(clients.isActive), clients.commercialName)
 }
 
-/** Route params reach here verbatim; a non-UUID would abort with a Postgres 22P02 instead of a 404. */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 export async function getClient(db: Db, ctx: Ctx, id: string): Promise<Client | null> {
-  if (!UUID_RE.test(id)) return null
+  if (!isUuid(id)) return null
   const [client] = await db.select().from(clients).where(scope(ctx, id))
   return client ?? null
 }
