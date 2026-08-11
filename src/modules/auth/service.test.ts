@@ -4,7 +4,7 @@ import { createTestDb } from '@/test/db'
 import { organizations } from '@/modules/organization/schema'
 import { users } from '@/modules/auth/schema'
 import { hashPassword } from './password'
-import { getSessionUser, verifyCredentials } from './service'
+import { getSessionUser, listActiveUsers, verifyCredentials } from './service'
 
 describe('verifyCredentials', () => {
   let db: Db
@@ -75,5 +75,32 @@ describe('getSessionUser (live-session revalidation)', () => {
 
   it('returns null for an unknown id', async () => {
     expect(await getSessionUser(db, crypto.randomUUID())).toBeNull()
+  })
+})
+
+describe('listActiveUsers', () => {
+  let db: Db
+  let orgId: string
+
+  beforeAll(async () => {
+    db = await createTestDb()
+    const [org] = await db.insert(organizations).values({ name: 'Org' }).returning()
+    const [otherOrg] = await db.insert(organizations).values({ name: 'Otra' }).returning()
+    orgId = org.id
+    await db.insert(users).values([
+      { organizationId: org.id, name: 'Zoe', email: 'zoe@x.com', passwordHash: 'x' },
+      { organizationId: org.id, name: 'Ana', email: 'ana@x.com', passwordHash: 'x' },
+      { organizationId: org.id, name: 'Baja', email: 'baja@x.com', passwordHash: 'x', isActive: false },
+      { organizationId: org.id, name: 'Borrada', email: 'borrada@x.com', passwordHash: 'x', deletedAt: new Date() },
+      { organizationId: otherOrg.id, name: 'Ajena', email: 'ajena@x.com', passwordHash: 'x' },
+    ])
+  })
+
+  it('returns only live, active users of the organization, sorted by name', async () => {
+    expect((await listActiveUsers(db, orgId)).map((u) => u.name)).toEqual(['Ana', 'Zoe'])
+  })
+
+  it('never leaks the password hash', async () => {
+    expect(Object.keys((await listActiveUsers(db, orgId))[0])).toEqual(['id', 'name', 'email'])
   })
 })
