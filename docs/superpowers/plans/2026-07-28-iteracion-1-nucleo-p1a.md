@@ -1292,7 +1292,7 @@ git commit -m "feat: add custom statuses management"
     - `archiveProject(db, ctx, id): Promise<void>`
   - `Project = typeof projects.$inferSelect`
 
-- [ ] **Step 1: Agregar `listActiveUsers` a `src/modules/auth/service.ts`**
+- [x] **Step 1: Agregar `listActiveUsers` a `src/modules/auth/service.ts`**
 
 Al final del archivo:
 
@@ -1310,7 +1310,7 @@ export async function listActiveUsers(db: Db, orgId: string): Promise<{ id: stri
 
 (`and`, `eq`, `isNull` ya están importados en ese archivo desde el fix de la Iteración 0.)
 
-- [ ] **Step 2: Crear `src/modules/projects/validation.ts`**
+- [x] **Step 2: Crear `src/modules/projects/validation.ts`**
 
 ```ts
 import { z } from 'zod'
@@ -1345,7 +1345,7 @@ export type ProjectInput = z.infer<typeof projectInputSchema>
 
 Nota para las actions (Task 7): `memberIds` viene de un `<select multiple>`; usar `formData.getAll('memberIds')` al armar el objeto antes de `safeParse`.
 
-- [ ] **Step 3: Escribir el test que falla — `src/modules/projects/service.test.ts`**
+- [x] **Step 3: Escribir el test que falla — `src/modules/projects/service.test.ts`**
 
 Ya existe un archivo con tests del **schema** (Iteración 0); estos tests del **service** van en el mismo archivo, en un `describe` nuevo al final:
 
@@ -1418,12 +1418,12 @@ describe('projects service', () => {
 
 Agregar los imports nuevos junto a los existentes del archivo (`seed`, `DomainError`, `Ctx`, `activityLog`, `projectMembers`, funciones del service y `listStatuses` de `@/modules/customization/service`).
 
-- [ ] **Step 4: Correr y verificar que falla**
+- [x] **Step 4: Correr y verificar que falla**
 
 Run: `npm test`
 Expected: FAIL — `./service` no existe en projects.
 
-- [ ] **Step 5: Implementar `src/modules/projects/service.ts`**
+- [x] **Step 5: Implementar `src/modules/projects/service.ts`**
 
 ```ts
 import { and, eq, inArray, isNull } from 'drizzle-orm'
@@ -1570,17 +1570,29 @@ export async function archiveProject(db: Db, ctx: Ctx, id: string): Promise<void
 }
 ```
 
-- [ ] **Step 6: Correr los tests y verificar que pasan**
+- [x] **Step 6: Correr los tests y verificar que pasan**
 
 Run: `npm test`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/modules/projects/ src/modules/auth/service.ts
 git commit -m "feat: add projects service with members and cross-tenant guards"
 ```
+
+> **Nota de ejecución (Task 6):** cuatro desviaciones sobre el código del plan, todas con test.
+> (1) `getProject` valida el id con `isUuid` antes de consultar, igual que `getClient` desde la Task 5:
+> los ids llegan de params de ruta y de argumentos de Server Action, y uno malformado aborta la consulta
+> con un 22P02 de Postgres en vez de devolver "no encontrado" (`listProjects` aplica el mismo guard al filtro
+> `clientId`). (2) `assertReferences` excluye usuarios con `deleted_at`; los solo desactivados sí pasan, para
+> no romper la edición de proyectos viejos cuando alguien queda en pausa. (3) `createProject`/`updateProject`/
+> `archiveProject` escriben fila, miembros y `activity_log` dentro de una misma transacción — un proyecto a
+> medias sin equipo es indistinguible de uno dejado vacío a propósito. (4) `projectInputSchema` rechaza rangos
+> de fecha invertidos (`dueDate < startDate`): ambas columnas son `date` sin constraint y nada más lo detecta.
+> Los tests del service van en `src/modules/projects/service.test.ts` (archivo nuevo, como dice **Files**), no
+> dentro de `schema.test.ts`; se agregó además `validation.test.ts` siguiendo el patrón de clientes.
 
 ---
 
