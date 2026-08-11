@@ -113,6 +113,23 @@ describe('projects service', () => {
     const filtered = await listProjects(db, ctx, { clientId: other.id })
     expect(filtered.map((p) => p.project.name)).toEqual(['Del otro cliente'])
     expect(filtered[0].clientName).toBe('Otro')
+    // Un filtro imposible devuelve nada; jamás la lista completa, que en la vista
+    // "proyectos del cliente X" mostraría proyectos ajenos como si fueran suyos.
+    expect(await listProjects(db, ctx, { clientId: 'not-a-uuid' })).toEqual([])
+  })
+
+  it('ignores duplicate member ids instead of violating the join table key', async () => {
+    const project = await createProject(db, ctx, { ...base(), name: 'Duplicados', memberIds: [userId, userId] })
+    const detail = await getProjectDetail(db, ctx, project.id)
+    expect(detail?.members.map((m) => m.id)).toEqual([userId])
+  })
+
+  it('logs updated with before/after names when the status does not change', async () => {
+    const project = await createProject(db, ctx, { ...base(), name: 'Antes' })
+    await updateProject(db, ctx, project.id, { ...base(), name: 'Después' })
+    const logs = await db.select().from(activityLog).where(eq(activityLog.entityId, project.id))
+    const updated = logs.find((l) => l.action === 'updated')
+    expect(updated?.changes).toEqual({ before: { name: 'Antes' }, after: { name: 'Después' } })
   })
 
   it('never reads or writes projects from another organization', async () => {
@@ -126,6 +143,7 @@ describe('projects service', () => {
 
     expect(await getProject(db, otherCtx, mine.id)).toBeNull()
     expect(await getProjectDetail(db, otherCtx, mine.id)).toBeNull()
+    expect(await listProjects(db, otherCtx)).toEqual([])
     await expect(updateProject(db, otherCtx, mine.id, { ...base(), name: 'Secuestrado' })).rejects.toThrow(DomainError)
     await expect(archiveProject(db, otherCtx, mine.id)).rejects.toThrow(DomainError)
     expect((await getProject(db, ctx, mine.id))?.name).toBe('Solo mío')

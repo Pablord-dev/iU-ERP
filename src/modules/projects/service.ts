@@ -73,16 +73,19 @@ const toRow = (input: ProjectInput) => ({
 })
 
 async function replaceMembers(db: Db, projectId: string, memberIds: string[]): Promise<void> {
+  // Deduplicado también aquí: el service no puede confiar en que su llamador ya validó.
+  const unique = [...new Set(memberIds)]
   await db.delete(projectMembers).where(eq(projectMembers.projectId, projectId))
-  if (memberIds.length) await db.insert(projectMembers).values(memberIds.map((userId) => ({ projectId, userId })))
+  if (unique.length) await db.insert(projectMembers).values(unique.map((userId) => ({ projectId, userId })))
 }
 
 export async function createProject(db: Db, ctx: Ctx, input: ProjectInput): Promise<Project> {
-  await assertReferences(db, ctx, input)
-  const statusId = input.statusId ?? (await getDefaultStatus(db, ctx, 'project')).id
   // Row, members and audit entry are one unit: a half-written project with no team
-  // would be indistinguishable from one deliberately left empty.
+  // would be indistinguishable from one deliberately left empty. The reference checks
+  // share the transaction so they see the same snapshot the insert writes against.
   return db.transaction(async (tx) => {
+    await assertReferences(tx, ctx, input)
+    const statusId = input.statusId ?? (await getDefaultStatus(tx, ctx, 'project')).id
     const [project] = await tx
       .insert(projects)
       .values({ organizationId: ctx.orgId, statusId, ...toRow(input) })
@@ -100,24 +103,36 @@ export async function getProject(db: Db, ctx: Ctx, id: string): Promise<Project 
 }
 
 export async function listProjects(db: Db, ctx: Ctx, filter?: { clientId?: string }): Promise<ProjectListItem[]> {
+  // Un filtro imposible no puede degradarse en "sin filtro": la vista de un cliente
+  // acabaría mostrando los proyectos de todos los demás.
+  if (filter?.clientId && !isUuid(filter.clientId)) return []
   return db
     .select({ project: projects, clientName: clients.commercialName, status: customStatuses })
     .from(projects)
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .innerJoin(customStatuses, eq(projects.statusId, customStatuses.id))
-    .where(and(scope(ctx), ...(filter?.clientId && isUuid(filter.clientId) ? [eq(projects.clientId, filter.clientId)] : [])))
+    .where(and(scope(ctx), ...(filter?.clientId ? [eq(projects.clientId, filter.clientId)] : [])))
     .orderBy(projects.name)
 }
 
 export async function getProjectDetail(db: Db, ctx: Ctx, id: string): Promise<ProjectDetail | null> {
   const project = await getProject(db, ctx, id)
   if (!project) return null
-  const [client] = await db.select().from(clients).where(eq(clients.id, project.clientId))
-  const [status] = await db.select().from(customStatuses).where(eq(customStatuses.id, project.statusId))
-  const health = project.healthId
-    ? ((await db.select().from(customStatuses).where(eq(customStatuses.id, project.healthId)))[0] ?? null)
-    : null
-  const [responsible] = await db.select().from(users).where(eq(users.id, project.responsibleId))
+  // Las FK ya están acotadas por assertReferences, pero la regla del proyecto es que
+  // ninguna consulta salga sin organization_id: aquí es donde un bug futuro se
+  // convertiría en una lectura cross-tenant.
+  const [client] = await db
+    .select()
+    .from(clients)
+    .where(and(eq(clients.organizationId, ctx.orgId), eq(clients.id, project.clientId)))
+  const statusOfOrg = (id: string) =>
+    db.select().from(customStatuses).where(and(eq(customStatuses.organizationId, ctx.orgId), eq(customStatuses.id, id)))
+  const [status] = await statusOfOrg(project.statusId)
+  const health = project.healthId ? ((await statusOfOrg(project.healthId))[0] ?? null) : null
+  const [responsible] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.organizationId, ctx.orgId), eq(users.id, project.responsibleId)))
   const members = await db
     .select({ id: users.id, name: users.name })
     .from(projectMembers)
@@ -128,16 +143,19 @@ export async function getProjectDetail(db: Db, ctx: Ctx, id: string): Promise<Pr
 }
 
 export async function updateProject(db: Db, ctx: Ctx, id: string, input: ProjectInput): Promise<Project> {
-  const before = await getProjectDetail(db, ctx, id)
-  if (!before) throw new DomainError('Proyecto no encontrado')
-  await assertReferences(db, ctx, input)
-  const statusId = input.statusId ?? before.project.statusId
+  // El estado previo se lee dentro de la transacción: leerlo fuera deja una ventana en la
+  // que otro archiva el proyecto y esto registra en la bitácora una escritura que no ocurrió.
   return db.transaction(async (tx) => {
+    const before = await getProjectDetail(tx, ctx, id)
+    if (!before) throw new DomainError('Proyecto no encontrado')
+    await assertReferences(tx, ctx, input)
+    const statusId = input.statusId ?? before.project.statusId
     const [project] = await tx
       .update(projects)
       .set({ statusId, ...toRow(input), updatedAt: new Date() })
       .where(scope(ctx, id))
       .returning()
+    if (!project) throw new DomainError('Proyecto no encontrado')
     await replaceMembers(tx, id, input.memberIds)
     if (statusId !== before.project.statusId) {
       const [after] = await tx.select().from(customStatuses).where(eq(customStatuses.id, statusId))
@@ -148,17 +166,28 @@ export async function updateProject(db: Db, ctx: Ctx, id: string, input: Project
         changes: { before: { status: before.status.name }, after: { status: after.name } },
       })
     } else {
-      await logActivity(tx, ctx, { entityType: 'project', entityId: id, action: 'updated' })
+      await logActivity(tx, ctx, {
+        entityType: 'project',
+        entityId: id,
+        action: 'updated',
+        changes: { before: { name: before.project.name }, after: { name: project.name } },
+      })
     }
     return project
   })
 }
 
 export async function archiveProject(db: Db, ctx: Ctx, id: string): Promise<void> {
-  const before = await getProject(db, ctx, id)
-  if (!before) throw new DomainError('Proyecto no encontrado')
+  if (!isUuid(id)) throw new DomainError('Proyecto no encontrado')
   await db.transaction(async (tx) => {
-    await tx.update(projects).set({ deletedAt: new Date(), updatedAt: new Date() }).where(scope(ctx, id))
+    // Sin fila actualizada no hubo archivado: dos clics simultáneos escribirían dos
+    // entradas 'archived' y borrarían el equipo de un proyecto que no cambió.
+    const [archived] = await tx
+      .update(projects)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(scope(ctx, id))
+      .returning()
+    if (!archived) throw new DomainError('Proyecto no encontrado')
     await tx.delete(projectMembers).where(eq(projectMembers.projectId, id))
     await logActivity(tx, ctx, { entityType: 'project', entityId: id, action: 'archived' })
   })
