@@ -1,7 +1,8 @@
-import { and, asc, eq, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, eq, or, sql } from 'drizzle-orm'
 import type { Db } from '@/db'
 import type { Ctx } from '@/lib/ctx'
 import { DomainError } from '@/lib/errors'
+import { isUuid } from '@/lib/uuid'
 import { logActivity } from '@/modules/collaboration/service'
 import { customStatuses } from './schema'
 import type { StatusCategory, StatusEntityType } from './catalogs'
@@ -57,6 +58,7 @@ export async function createStatus(db: Db, ctx: Ctx, input: StatusInput): Promis
 }
 
 async function getOwnStatus(db: Db, ctx: Ctx, id: string): Promise<CustomStatus> {
+  if (!isUuid(id)) throw new DomainError('Estado no encontrado')
   const [status] = await db.select().from(customStatuses).where(and(byOrg(ctx), eq(customStatuses.id, id)))
   if (!status) throw new DomainError('Estado no encontrado')
   return status
@@ -69,36 +71,41 @@ export async function updateStatus(db: Db, ctx: Ctx, id: string, input: { name: 
     throw new DomainError('Ya existe un estado con ese nombre')
   const [status] = await db
     .update(customStatuses)
-    .set({ name: input.name, color: input.color ?? null, updatedAt: new Date() })
+    // color is left untouched when omitted: callers that only rename must not clear it.
+    .set({ name: input.name, ...(input.color !== undefined && { color: input.color }), updatedAt: new Date() })
     .where(and(byOrg(ctx), eq(customStatuses.id, id)))
     .returning()
   await logActivity(db, ctx, {
     entityType: 'custom_status',
     entityId: id,
     action: 'updated',
-    changes: { before: { name: before.name }, after: { name: status.name } },
+    changes: {
+      before: { name: before.name, color: before.color },
+      after: { name: status.name, color: status.color },
+    },
   })
   return status
 }
 
+/** Archived rows count as usage: their FKs are ON DELETE NO ACTION, so the row still pins the status. */
 async function statusInUse(db: Db, ctx: Ctx, id: string): Promise<boolean> {
   const count = sql<number>`count(*)::int`
   const [p] = await db
     .select({ n: count })
     .from(projects)
-    .where(and(eq(projects.organizationId, ctx.orgId), isNull(projects.deletedAt), or(eq(projects.statusId, id), eq(projects.healthId, id))))
+    .where(and(eq(projects.organizationId, ctx.orgId), or(eq(projects.statusId, id), eq(projects.healthId, id))))
   const [s] = await db
     .select({ n: count })
     .from(subprojects)
-    .where(and(eq(subprojects.organizationId, ctx.orgId), isNull(subprojects.deletedAt), eq(subprojects.statusId, id)))
+    .where(and(eq(subprojects.organizationId, ctx.orgId), eq(subprojects.statusId, id)))
   const [m] = await db
     .select({ n: count })
     .from(milestones)
-    .where(and(eq(milestones.organizationId, ctx.orgId), isNull(milestones.deletedAt), eq(milestones.statusId, id)))
+    .where(and(eq(milestones.organizationId, ctx.orgId), eq(milestones.statusId, id)))
   const [t] = await db
     .select({ n: count })
     .from(tasks)
-    .where(and(eq(tasks.organizationId, ctx.orgId), isNull(tasks.deletedAt), eq(tasks.statusId, id)))
+    .where(and(eq(tasks.organizationId, ctx.orgId), eq(tasks.statusId, id)))
   return p.n + s.n + m.n + t.n > 0
 }
 
@@ -114,8 +121,25 @@ export async function moveStatus(db: Db, ctx: Ctx, id: string, direction: 'up' |
   const status = await getOwnStatus(db, ctx, id)
   const siblings = await listStatuses(db, ctx, status.entityType as StatusEntityType)
   const idx = siblings.findIndex((s) => s.id === id)
-  const swapWith = direction === 'up' ? siblings[idx - 1] : siblings[idx + 1]
-  if (!swapWith) return
-  await db.update(customStatuses).set({ sortOrder: swapWith.sortOrder, updatedAt: new Date() }).where(eq(customStatuses.id, status.id))
-  await db.update(customStatuses).set({ sortOrder: status.sortOrder, updatedAt: new Date() }).where(eq(customStatuses.id, swapWith.id))
+  const target = direction === 'up' ? idx - 1 : idx + 1
+  if (target < 0 || target >= siblings.length) return
+  const reordered = [...siblings]
+  ;[reordered[idx], reordered[target]] = [reordered[target], reordered[idx]]
+  // Renumber the whole list rather than swapping two values: tied sortOrders would otherwise
+  // make the swap a silent no-op with no way to recover from the UI.
+  await db.transaction(async (tx) => {
+    for (const [position, sibling] of reordered.entries()) {
+      if (sibling.sortOrder === position) continue
+      await tx
+        .update(customStatuses)
+        .set({ sortOrder: position, updatedAt: new Date() })
+        .where(and(byOrg(ctx), eq(customStatuses.id, sibling.id)))
+    }
+    await logActivity(tx, ctx, {
+      entityType: 'custom_status',
+      entityId: id,
+      action: 'reordered',
+      changes: { before: { position: idx }, after: { position: target } },
+    })
+  })
 }

@@ -1083,7 +1083,7 @@ export async function moveStatus(db: Db, ctx: Ctx, id: string, direction: 'up' |
 }
 ```
 
-Nota: `statusInUse` usa `count`, no trae filas; los archivados (soft-deleted) no bloquean la eliminación.
+Nota: `statusInUse` usa `count`, no trae filas. **Corrección respecto al snippet:** los archivados (soft-deleted) **sí** bloquean la eliminación — las FK son `ON DELETE NO ACTION`, así que una fila archivada sigue fijando el estado y el DELETE físico reventaba con violación de FK (ver nota de ejecución).
 
 - [x] **Step 5: Correr los tests y verificar que pasan**
 
@@ -1267,6 +1267,8 @@ git commit -m "feat: add custom statuses management"
 ```
 
 > **Nota de ejecución (Task 5):** tres desviaciones. (1) `createStatus`/`updateStatus` rechazan nombres duplicados (case-insensitive) dentro del mismo `entity_type` con `DomainError`: el schema tiene el índice único `custom_statuses_org_type_name_unique` (Iteración 0) y sin el guard un nombre repetido —acción normal en esta pantalla— reventaba con error crudo de Postgres. Cubierto con test. (2) Se omitió el `export type { StatusEntityType }` al final de `actions.ts`: nada lo importa desde ahí y `./catalogs` ya exporta el tipo. (3) Los botones ↑/↓/Eliminar se deshabilitan mientras corre la transición (`pending` de `useTransition`, que el snippet descartaba) para evitar dobles envíos. Además hubo que subir `hookTimeout` a 30 s en `vitest.config.ts`: con el archivo de tests número 14, el arranque paralelo de PGlite + migraciones superaba el default de 10 s y tumbaba un subconjunto distinto de archivos en cada corrida. La verificación manual en `/configuracion/estados` queda pendiente para Pablo.
+>
+> **Correcciones del code review (Task 5):** (a) **crítico** — `statusInUse` excluía las filas archivadas, pero las FK a `custom_statuses` son `ON DELETE NO ACTION`: borrar un estado usado solo por un proyecto archivado reventaba con violación de FK (500 sin mensaje) en vez de `DomainError`. Reproducido con test antes de arreglar; ahora los archivados bloquean el borrado y el snippet del Step 4 quedó corregido. (b) `getOwnStatus` valida forma UUID (las Server Actions son endpoints públicos: un id arbitrario daba 22P02); el regex se extrajo a `@/lib/uuid` y `getClient` de la Task 3 ahora lo reutiliza. (c) `moveStatus` corre en transacción, filtra por org en los UPDATE, registra `reordered` en la bitácora y **renumera la lista completa** en vez de intercambiar dos valores: con `sortOrder` empatados el intercambio era un no-op silencioso sin salida desde la UI. (d) `updateStatus` ya no pisa `color` cuando el caller no lo manda y registra color en el before/after. (e) Tests nuevos: aislamiento entre organizaciones, ids malformados, `down` y sus bordes, y recuperación de empates. Pendiente deliberado (no bloqueante): el botón Eliminar no pide confirmación y las acciones exitosas no dan feedback más allá del re-render.
 
 ---
 

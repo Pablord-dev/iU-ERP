@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import type { ActionResult } from '@/lib/action-result'
+import type { StatusEntityType } from './catalogs'
 import type { CustomStatus } from './service'
 import { createStatusAction, deleteStatusAction, moveStatusAction, updateStatusAction } from './actions'
 
@@ -40,7 +41,7 @@ function StatusRow({ status, first, last }: { status: CustomStatus; first: boole
   )
 }
 
-export function StatusManager({ entityType, statuses, allowCategory }: { entityType: string; statuses: CustomStatus[]; allowCategory: boolean }) {
+export function StatusManager({ entityType, statuses, allowCategory }: { entityType: StatusEntityType; statuses: CustomStatus[]; allowCategory: boolean }) {
   const [state, formAction, pending] = useActionState(createStatusAction, null)
   return (
     <div className="space-y-3">
