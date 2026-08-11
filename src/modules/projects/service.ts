@@ -141,7 +141,7 @@ export async function getProjectDetail(db: Db, ctx: Ctx, id: string): Promise<Pr
   const members = await db
     .select({ id: users.id, name: users.name })
     .from(projectMembers)
-    .innerJoin(users, eq(projectMembers.userId, users.id))
+    .innerJoin(users, and(eq(projectMembers.userId, users.id), eq(users.organizationId, ctx.orgId)))
     .where(eq(projectMembers.projectId, project.id))
     .orderBy(users.name)
   return { project, clientName: client.commercialName, status, health, responsibleName: responsible.name, members }

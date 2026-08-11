@@ -82,9 +82,10 @@ export function ProjectForm({ action, clients, users, statuses, healths, project
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {/* min y max replican projectInputSchema: el navegador avisa antes de mandar el submit. */}
+        {/* min, max y step replican el schema y la precisión de la columna: un step de 0.25
+            bloquearía en el navegador valores que el service acepta, como 3.1 horas. */}
         <Field name="budgetedHours" label="Horas presupuestadas" errors={errs.budgetedHours}>
-          <Input id="budgetedHours" name="budgetedHours" type="number" step="0.25" min="0.25" max="999999.99"
+          <Input id="budgetedHours" name="budgetedHours" type="number" step="0.01" min="0.01" max="999999.99"
             defaultValue={project?.budgetedHours ?? ''} />
         </Field>
         <Field name="hourlyRate" label="Tarifa por hora (sobrescribe la del cliente)" errors={errs.hourlyRate}>

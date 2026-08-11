@@ -29,6 +29,8 @@ export async function createProjectAction(_prev: ActionResult | null, formData: 
     throw e
   }
   revalidatePath('/proyectos')
+  // La ficha del cliente lista sus proyectos; sin esto quedaría con la lista anterior.
+  revalidatePath('/clientes/[id]', 'page')
   redirect(`/proyectos/${id}`)
 }
 
@@ -43,6 +45,8 @@ export async function updateProjectAction(id: string, _prev: ActionResult | null
     throw e
   }
   revalidatePath('/proyectos')
+  // La ficha del cliente lista sus proyectos; sin esto quedaría con la lista anterior.
+  revalidatePath('/clientes/[id]', 'page')
   revalidatePath(`/proyectos/${id}`)
   redirect(`/proyectos/${id}`)
 }
@@ -51,5 +55,7 @@ export async function archiveProjectAction(id: string): Promise<void> {
   const ctx = await requireCtx()
   await archiveProject(db, ctx, id)
   revalidatePath('/proyectos')
+  // La ficha del cliente lista sus proyectos; sin esto quedaría con la lista anterior.
+  revalidatePath('/clientes/[id]', 'page')
   redirect('/proyectos')
 }

@@ -19,9 +19,12 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     listStatuses(db, ctx, 'project'),
     listStatuses(db, ctx, 'project_health'),
   ])
-  // El responsable pudo desactivarse después de asignarlo: el service lo sigue admitiendo,
-  // así que el select debe conservarlo o al guardar el formulario lo mandaría vacío.
+  // Responsable y participantes pudieron desactivarse después de asignarlos: el service los
+  // sigue admitiendo, así que el select debe conservarlos. Sin esto, guardar un cambio de
+  // prioridad mandaría el responsable vacío y borraría del equipo a los participantes
+  // desactivados, sin aviso y sin que nadie los tocara.
   const byId = new Map(activeUsers.map((u) => [u.id, { id: u.id, name: u.name }]))
+  for (const m of detail.members) byId.set(m.id, m)
   byId.set(detail.project.responsibleId, { id: detail.project.responsibleId, name: detail.responsibleName })
   const users = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'))
   // Lo mismo con el cliente: si lo archivaron, sin esta opción el formulario quedaría sin selección.

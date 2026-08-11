@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { db } from '@/db'
 import { requireCtx } from '@/lib/session'
 import { getProjectDetail } from '@/modules/projects/service'
+import { getClient } from '@/modules/clients/service'
 import { archiveProjectAction } from '@/modules/projects/actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,12 +17,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const detail = await getProjectDetail(db, ctx, id)
   if (!detail) notFound()
   const { project, clientName, status, health, responsibleName, members } = detail
+  // La ficha del cliente excluye archivados: enlazar a ciegas llevaría a un 404.
+  const clientIsLive = (await getClient(db, ctx, project.clientId)) !== null
   return (
     <div className="max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{project.name}</h1>
-          <Link className="text-sm text-gray-500 hover:underline" href={`/clientes/${project.clientId}`}>{clientName}</Link>
+          {clientIsLive ? (
+            <Link className="text-sm text-gray-500 hover:underline" href={`/clientes/${project.clientId}`}>{clientName}</Link>
+          ) : (
+            <p className="text-sm text-gray-500">{clientName} (archivado)</p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild><Link href={`/proyectos/${project.id}/editar`}>Editar</Link></Button>
