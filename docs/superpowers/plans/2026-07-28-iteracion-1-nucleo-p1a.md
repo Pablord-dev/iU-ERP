@@ -839,7 +839,7 @@ git add src/modules/clients/ "src/app/(app)/clientes/"
 git commit -m "feat: add clients CRUD pages"
 ```
 
-> **Nota de ejecución (Task 4):** además de lo planeado, `getClient` ahora valida la forma UUID del id y devuelve `null` si no coincide (hallazgo del review de la Task 3): los params de la ruta `/clientes/[id]` llegan tal cual al service y un id no-UUID abortaba con error 22P02 de Postgres (500) en vez de renderizar el 404. Cubierto con test. La verificación manual con `npm run dev` quedó pendiente para Pablo (el agente no tiene credenciales de login); los checks automáticos (lint, typecheck, 44 tests, build con las 4 rutas) pasaron.
+> **Nota de ejecución (Task 4):** además de lo planeado, `getClient` ahora valida la forma UUID del id y devuelve `null` si no coincide (hallazgo del review de la Task 3): los params de la ruta `/clientes/[id]` llegan tal cual al service y un id no-UUID abortaba con error 22P02 de Postgres (500) en vez de renderizar el 404. Cubierto con test. Por code review se agregó también `src/app/(app)/error.tsx` (no existía ningún error boundary: un `DomainError` sin manejar en `archiveClientAction` — p. ej. doble clic — mostraba la pantalla de error cruda de Next; las actions de las Tasks 7-9/11 clonan este patrón) y el `min` del input de tarifa pasó a `0.01` para coincidir con el `.positive()` del schema. La verificación manual con `npm run dev` quedó pendiente para Pablo (el agente no tiene credenciales de login); los checks automáticos (lint, typecheck, 44 tests, build con las 4 rutas) pasaron.
 
 ---
 

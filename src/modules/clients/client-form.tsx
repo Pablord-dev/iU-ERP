@@ -46,7 +46,7 @@ export function ClientForm({ action, client }: { action: FormAction; client?: Cl
         </Field>
       </div>
       <Field name="hourlyRate" label="Tarifa por hora (MXN)" errors={errs.hourlyRate}>
-        <Input id="hourlyRate" name="hourlyRate" type="number" step="0.01" min="0" defaultValue={client?.hourlyRate ?? ''} />
+        <Input id="hourlyRate" name="hourlyRate" type="number" step="0.01" min="0.01" defaultValue={client?.hourlyRate ?? ''} />
       </Field>
       <Field name="notes" label="Notas" errors={errs.notes}>
         <Textarea id="notes" name="notes" defaultValue={client?.notes ?? ''} rows={4} />
