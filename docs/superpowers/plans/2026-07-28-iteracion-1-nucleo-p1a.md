@@ -1628,7 +1628,7 @@ git commit -m "feat: add projects service with members and cross-tenant guards"
   - `<ProjectForm action clients users statuses healths project detail />`
   - Página de detalle `/proyectos/[id]` con secciones vacías para subproyectos (Task 8), hitos (Task 9) y tareas (Task 11)
 
-- [ ] **Step 1: Crear `src/modules/projects/actions.ts`**
+- [x] **Step 1: Crear `src/modules/projects/actions.ts`**
 
 Igual patrón que clientes; la única diferencia es armar el objeto con `getAll` para `memberIds`:
 
@@ -1689,7 +1689,7 @@ export async function archiveProjectAction(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 2: Crear `src/modules/projects/project-form.tsx`**
+- [x] **Step 2: Crear `src/modules/projects/project-form.tsx`**
 
 ```tsx
 'use client'
@@ -1792,7 +1792,7 @@ export function ProjectForm({ action, clients, users, statuses, healths, project
 }
 ```
 
-- [ ] **Step 3: Crear las páginas de proyectos**
+- [x] **Step 3: Crear las páginas de proyectos**
 
 `src/app/(app)/proyectos/page.tsx`:
 
@@ -1985,7 +1985,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 }
 ```
 
-- [ ] **Step 4: Listar proyectos del cliente en su detalle**
+- [x] **Step 4: Listar proyectos del cliente en su detalle**
 
 En `src/app/(app)/clientes/[id]/page.tsx`, reemplazar el párrafo "Los proyectos del cliente se listan aquí a partir de la Task 7." por:
 
@@ -2009,7 +2009,7 @@ En `src/app/(app)/clientes/[id]/page.tsx`, reemplazar el párrafo "Los proyectos
 
 con `const projectRows = await listProjects(db, ctx, { clientId: client.id })` junto al `getClient` e importando `listProjects`.
 
-- [ ] **Step 5: Verificación y commit**
+- [x] **Step 5: Verificación y commit**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build`
 Expected: en verde.
@@ -2019,6 +2019,29 @@ Con `npm run dev`: crear un proyecto para el cliente ACME con responsable, estad
 git add src/modules/projects/ "src/app/(app)/proyectos/" "src/app/(app)/clientes/"
 git commit -m "feat: add projects CRUD pages"
 ```
+
+> **Nota de ejecución (Task 7):** cuatro desviaciones, todas por callejones sin salida alcanzables desde
+> estas pantallas. (1) `assertReferences` exigía un cliente vivo también al actualizar, así que archivar un
+> cliente dejaba sus proyectos **imposibles de guardar** ("Cliente no encontrado" sobre un campo que el usuario
+> no tocó); ahora acepta el `clientId` ya almacenado —que por construcción es de la organización— y sigue
+> rechazando clientes archivados para proyectos nuevos (test en `service.test.ts`). (2) La página de edición
+> conserva como opción al cliente archivado y al responsable desactivado: sin eso el `<select>` se renderizaba
+> vacío y el submit fallaba en un campo intacto. (3) El placeholder de estado lee el nombre del estado por
+> defecto del catálogo en vez de escribir "Borrador" en el código — la constraint global prohíbe estados
+> hardcodeados y una organización puede renombrarlo. (4) `min`/`max` de los inputs numéricos replican
+> `projectInputSchema` (el plan traía `min="0"`, que el schema rechaza por `.positive()`).
+>
+> `archiveProjectAction` no atrapa `DomainError` a propósito, igual que la de clientes: un doble clic en
+> "Archivar" lo recoge el boundary `src/app/(app)/error.tsx` creado en la Task 4.
+>
+> Correcciones del code review: el parche de opciones del `<select>` cubría al responsable pero **no a los
+> participantes**, y ambos comparten la misma lista `users` — guardar un cambio de prioridad borraba del equipo
+> a los participantes desactivados, en silencio; `budgetedHours` usaba `step="0.25"`, que bloquea en el navegador
+> valores que el service acepta (3.1 h) y deja intocable un valor importado que no sea múltiplo de 0.25; las tres
+> actions revalidan además `/clientes/[id]`, que desde esta task lista los proyectos del cliente; el encabezado
+> del detalle enlazaba a un cliente archivado y caía en un 404, ahora lo muestra como texto con "(archivado)";
+> y `getProjectDetail` hacía el join a `users` sin `organization_id` — la única consulta del módulo sin el filtro
+> que su propio comentario decía aplicar (venía de la Task 6).
 
 ---
 

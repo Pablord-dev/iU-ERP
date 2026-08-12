@@ -88,6 +88,26 @@ describe('projects service', () => {
     await expect(createProject(db, ctx, { ...base(), responsibleId: gone.id })).rejects.toThrow(DomainError)
   })
 
+  it('keeps projects of an archived client editable', async () => {
+    const [doomed] = await db.insert(clients).values({ organizationId: ctx.orgId, commercialName: 'Se archiva' }).returning()
+    const project = await createProject(db, ctx, { ...base(), clientId: doomed.id, name: 'Del archivado' })
+    await db.update(clients).set({ deletedAt: new Date() }).where(eq(clients.id, doomed.id))
+
+    // Ya no admite proyectos nuevos...
+    await expect(createProject(db, ctx, { ...base(), clientId: doomed.id, name: 'Otro' })).rejects.toThrow(DomainError)
+    // ...pero archivar un cliente no puede dejar sus proyectos existentes sin poder guardarse.
+    const renamed = await updateProject(db, ctx, project.id, { ...base(), clientId: doomed.id, name: 'Renombrado' })
+    expect(renamed.name).toBe('Renombrado')
+    // Y tampoco se puede mover el proyecto hacia otro cliente archivado.
+    const [alsoGone] = await db
+      .insert(clients)
+      .values({ organizationId: ctx.orgId, commercialName: 'Otro archivado', deletedAt: new Date() })
+      .returning()
+    await expect(
+      updateProject(db, ctx, project.id, { ...base(), clientId: alsoGone.id, name: 'Renombrado' }),
+    ).rejects.toThrow(DomainError)
+  })
+
   it('logs status_changed with before/after names on update', async () => {
     const project = await createProject(db, ctx, { ...base(), name: 'Cambia estado' })
     const activo = (await listStatuses(db, ctx, 'project')).find((s) => s.name === 'Activo')!

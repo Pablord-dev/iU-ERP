@@ -28,9 +28,14 @@ export interface ProjectDetail extends ProjectListItem {
 const scope = (ctx: Ctx, id?: string) =>
   and(eq(projects.organizationId, ctx.orgId), isNull(projects.deletedAt), ...(id ? [eq(projects.id, id)] : []))
 
-/** Cross-tenant guards: every FK the form sends must belong to ctx.orgId (spec §4.1). */
-async function assertReferences(db: Db, ctx: Ctx, input: ProjectInput): Promise<void> {
-  if (!(await getClient(db, ctx, input.clientId))) throw new DomainError('Cliente no encontrado')
+/**
+ * Cross-tenant guards: every FK the form sends must belong to ctx.orgId (spec §4.1).
+ * `currentClientId` is the project's stored client — already org-scoped — and is accepted
+ * even once archived, so archiving a client does not lock its projects out of editing.
+ */
+async function assertReferences(db: Db, ctx: Ctx, input: ProjectInput, currentClientId?: string): Promise<void> {
+  if (input.clientId !== currentClientId && !(await getClient(db, ctx, input.clientId)))
+    throw new DomainError('Cliente no encontrado')
   const people = [...new Set([input.responsibleId, ...input.memberIds])]
   // Soft-deleted users are gone for assignment purposes; merely deactivated ones still
   // pass, so editing an old project does not break when someone is put on hold.
@@ -136,7 +141,7 @@ export async function getProjectDetail(db: Db, ctx: Ctx, id: string): Promise<Pr
   const members = await db
     .select({ id: users.id, name: users.name })
     .from(projectMembers)
-    .innerJoin(users, eq(projectMembers.userId, users.id))
+    .innerJoin(users, and(eq(projectMembers.userId, users.id), eq(users.organizationId, ctx.orgId)))
     .where(eq(projectMembers.projectId, project.id))
     .orderBy(users.name)
   return { project, clientName: client.commercialName, status, health, responsibleName: responsible.name, members }
@@ -148,7 +153,7 @@ export async function updateProject(db: Db, ctx: Ctx, id: string, input: Project
   return db.transaction(async (tx) => {
     const before = await getProjectDetail(tx, ctx, id)
     if (!before) throw new DomainError('Proyecto no encontrado')
-    await assertReferences(tx, ctx, input)
+    await assertReferences(tx, ctx, input, before.project.clientId)
     const statusId = input.statusId ?? before.project.statusId
     const [project] = await tx
       .update(projects)

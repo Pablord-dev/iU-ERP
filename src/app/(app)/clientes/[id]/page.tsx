@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { db } from '@/db'
 import { requireCtx } from '@/lib/session'
 import { getClient } from '@/modules/clients/service'
+import { listProjects } from '@/modules/projects/service'
 import { archiveClientAction } from '@/modules/clients/actions'
 import { Button } from '@/components/ui/button'
 
@@ -11,6 +12,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const ctx = await requireCtx()
   const client = await getClient(db, ctx, id)
   if (!client) notFound()
+  const projectRows = await listProjects(db, ctx, { clientId: client.id })
   return (
     <div className="max-w-2xl">
       <div className="mb-4 flex items-center justify-between">
@@ -31,7 +33,21 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <div><dt className="text-gray-500">Estado</dt><dd>{client.isActive ? 'Activo' : 'Inactivo'}</dd></div>
         <div className="col-span-2"><dt className="text-gray-500">Notas</dt><dd className="whitespace-pre-wrap">{client.notes ?? '—'}</dd></div>
       </dl>
-      <p className="mt-6 text-sm text-gray-400">Los proyectos del cliente se listan aquí a partir de la Task 7.</p>
+      <section className="mt-6">
+        <h2 className="mb-2 text-lg font-medium">Proyectos</h2>
+        {projectRows.length === 0 ? (
+          <p className="text-sm text-gray-400">Sin proyectos todavía.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {projectRows.map(({ project, status }) => (
+              <li key={project.id}>
+                <Link className="hover:underline" href={`/proyectos/${project.id}`}>{project.name}</Link>
+                <span className="ml-2 text-gray-500">({status.name})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }
